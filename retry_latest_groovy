@@ -1,0 +1,49 @@
+#!groovy
+timestamps {
+    properties([parameters([choice(choices: ['test', 'dev'], description: 'select branch', name: 'branch'), string(defaultValue: '0', description: 'No of times to Retry?', name: 'No', trim: false)])])
+node {
+    if("${params.branch}" == 'test'){
+    try {
+
+        stage('Checkout') {
+            checkout([$class: 'GitSCM', branches: [[name: '*/main']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '', url: 'https://github.com/avinash0106/retry_failedbuild.git']]])
+        }
+        stage('test'){
+            echo "test"
+            
+        }
+        
+        
+    } catch (err) {
+        echo 'Pipeline failed'
+        currentBuild.result = 'FAILURE'
+    }}
+    
+    if("${params.branch}" == 'dev'){
+    try {
+
+        stage('Checkout') {
+            checkout([$class: 'GitSCM', branches: [[name: '*/main']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '', url: 'https://github.com/avinash0106/retry_failedbuild.git']]])
+        }
+        stage('error')
+        {
+           echo "dev"
+           throw new Exception()
+        }
+        
+        
+    } catch (err) {
+        echo 'Pipeline failed'
+        currentBuild.result = 'FAILURE'
+    }}
+    if ("${params.no}" == "1" && currentBuild.result == 'FAILURE' ){
+        echo "done"
+        build.getExecutor().interrupt(Result.ABORTED)
+    }
+    if (currentBuild.result == 'FAILURE') {
+        echo "${params.Retry} Job!"
+        build quietPeriod: 5, job: 'retry_latest' ,parameters: [string(name: 'branch', value: "${branch}"),string(name: 'no', value: "1")]
+       }
+    }
+}
+
